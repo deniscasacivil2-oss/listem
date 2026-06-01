@@ -1,0 +1,692 @@
+import React, { useState, useEffect, useMemo } from "react";
+import * as Icons from "lucide-react";
+import {
+  LayoutDashboard,
+  AlertCircle,
+  RefreshCw,
+  Menu,
+  ChevronLeft,
+  ChartLine,
+  X,
+  Folder,
+  Users,
+  PieChart as PieChartIcon,
+  BookOpen
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from "recharts";
+
+// --- Tipos ---
+export interface Category {
+  id: string;
+  label: string;
+  icon: Icons.LucideIcon;
+}
+
+export interface DashboardLink {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  curso?: string;
+  url: string;
+  icon: string;
+  [key: string]: any; 
+}
+
+const CHART_COLORS = ['#003366', '#ffb800', '#14b8a6', '#f97316', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981'];
+
+// --- Componente Header ---
+interface HeaderProps {
+  toggleMobileMenu: () => void;
+  activeCategoryLabel: string;
+}
+
+function Header({ toggleMobileMenu, activeCategoryLabel }: HeaderProps) {
+  return (
+    <header className="bg-white border-b h-16 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30 shadow-sm flex-shrink-0">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={toggleMobileMenu}
+          className="md:hidden text-[#003366] hover:bg-gray-100 p-2 rounded-md"
+        >
+          <Menu size={24} />
+        </button>
+        <h1 className="text-lg lg:text-xl font-bold text-[#003366] uppercase tracking-tight flex items-center">
+          <span className="text-gray-600">{activeCategoryLabel}</span>
+        </h1>
+      </div>
+
+      <div className="flex items-center space-x-3">
+        <span className="hidden sm:inline-block bg-blue-100 text-[#003366] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+          Ano 2026
+        </span>
+      </div>
+    </header>
+  );
+}
+
+// --- Componente Sidebar ---
+interface SidebarProps {
+  isCollapsed: boolean;
+  setIsCollapsed: (v: boolean) => void;
+  isMobileOpen: boolean;
+  setIsMobileOpen: (v: boolean) => void;
+  categories: Category[];
+  activeCategory: string;
+  setActiveCategory: (id: string) => void;
+}
+
+function Sidebar({
+  isCollapsed,
+  setIsCollapsed,
+  isMobileOpen,
+  setIsMobileOpen,
+  categories,
+  activeCategory,
+  setActiveCategory,
+}: SidebarProps) {
+  const handleCategoryClick = (id: string) => {
+    setActiveCategory(id);
+    if (isMobileOpen) {
+      setIsMobileOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.15);
+          border-radius: 10px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`bg-[#003366] text-white flex-shrink-0 flex flex-col fixed md:sticky top-0 h-screen z-50 transition-all duration-300 ease-in-out
+          ${isCollapsed ? "w-20" : "w-64"} 
+          ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-blue-900 min-h-[64px]">
+          {!isCollapsed && (
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden p-0.5">
+                <img 
+                  src="https://pt.wikipedia.org/wiki/Special:FilePath/Bras%C3%A3o_de_Ol%C3%ADmpia,_SP.jpg" 
+                  alt="Prefeitura" 
+                  className="w-full h-full object-contain" 
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-sm leading-tight tracking-wide">CURSOS</span>
+                <span className="text-[10px] text-blue-300 uppercase tracking-widest">Sebrae</span>
+              </div>
+            </div>
+          )}
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)} 
+            className="hidden md:block p-2 rounded hover:bg-blue-800 text-blue-200 flex-shrink-0 ml-auto"
+          >
+            <ChevronLeft size={20} className={`transform transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
+          </button>
+          <button 
+            onClick={() => setIsMobileOpen(false)} 
+            className="md:hidden p-2 rounded hover:bg-blue-800 text-blue-200 ml-auto"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryClick(cat.id)}
+              className={`w-full flex items-center transition-all duration-200 rounded-lg whitespace-nowrap overflow-hidden
+                ${isCollapsed ? "justify-center p-3" : "p-3"} 
+                ${activeCategory === cat.id ? "bg-[#ffb800] text-[#003366] font-semibold shadow-md" : "text-blue-100 hover:bg-blue-800"}
+              `}
+              title={isCollapsed ? cat.label : ""}
+            >
+              <cat.icon size={20} className={`flex-shrink-0 ${isCollapsed ? "" : "mr-3"}`} />
+              <span className={`text-sm transition-all duration-300 ${isCollapsed ? "opacity-0 w-0" : "opacity-100"}`}>
+                {cat.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+
+        <div className={`p-6 bg-blue-950 text-[10px] text-blue-300 mt-auto border-t border-blue-900 transition-all duration-300 flex flex-col flex-shrink-0 ${isCollapsed ? "items-center text-center" : "items-start text-left"}`}>
+          {isCollapsed ? (
+            <ChartLine size={20} className="text-blue-300" title="Cursos Sebrae" />
+          ) : (
+            <>
+              <p className="font-bold mb-3 uppercase tracking-wider text-blue-200">Divisão de Análise de Dados e Indicadores|Casa Civil</p>
+              <ChartLine size={16} className="mb-2" />
+            </>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+// --- Componente: Painel Geral Analítico (Gráficos) ---
+const AnalyticsDashboard: React.FC<{ data: DashboardLink[] }> = ({ data }) => {
+  const [selectedSegment, setSelectedSegment] = React.useState<{name: string, value: number, items: DashboardLink[]} | null>(null);
+
+  const stats = React.useMemo(() => {
+    if (!data || data.length === 0) return null;
+
+    const getCol = (keywords: string[]) => {
+      const found = Object.keys(data[0]).find(key => 
+        keywords.some(kw => key.toLowerCase().includes(kw))
+      );
+      return found;
+    };
+
+    const alunosCol = getCol(['aluno', 'quantidade', 'vaga']);
+    const segmentoCol = getCol(['segmento', 'setor', 'ramo']);
+    const porteCol = getCol(['porte', 'tamanho']);
+    const meiCol = getCol(['mei']);
+    const meCol = getCol(['me']); 
+    const eppCol = getCol(['epp']);
+
+    let totalAlunos = 0;
+    const alunosPorCurso: Record<string, number> = {};
+    const segmentoData: Record<string, DashboardLink[]> = {};
+    let countMei = 0, countMe = 0, countEpp = 0;
+
+    data.forEach(item => {
+      const curso = item.curso || 'Sem Curso Atribuído';
+      
+      const alunos = alunosCol ? (Number(item[alunosCol]) || 0) : 1;
+      totalAlunos += alunos;
+      alunosPorCurso[curso] = (alunosPorCurso[curso] || 0) + alunos;
+
+      if (segmentoCol) {
+        const seg = String(item[segmentoCol] || 'Não Informado').trim();
+        if (seg) {
+          if (!segmentoData[seg]) segmentoData[seg] = [];
+          segmentoData[seg].push(item);
+        }
+      }
+
+      if (porteCol) {
+        const p = String(item[porteCol]).toUpperCase();
+        if (p.includes('MEI')) countMei++;
+        else if (p.includes('EPP')) countEpp++;
+        else if (p.includes('ME')) countMe++;
+      } else {
+        if (meiCol) countMei += Number(item[meiCol]) || 0;
+        if (eppCol) countEpp += Number(item[eppCol]) || 0;
+        const allVals = Object.values(item).join(' ').toUpperCase();
+        if (!meiCol && allVals.includes('MEI')) countMei++;
+        if (!eppCol && allVals.includes('EPP')) countEpp++;
+        if (!meCol && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
+      }
+    });
+
+    const cursosUnicos = Object.keys(alunosPorCurso);
+    const chartAlunos = cursosUnicos.map(c => ({ name: c, alunos: alunosPorCurso[c] }));
+
+    const chartSegmento = Object.keys(segmentoData)
+      .map(s => ({ name: s, value: segmentoData[s].length, items: segmentoData[s] }))
+      .sort((a, b) => b.value - a.value);
+
+    const chartPorte = [
+      { name: 'MEI', value: countMei },
+      { name: 'ME', value: countMe },
+      { name: 'EPP', value: countEpp }
+    ].filter(d => d.value > 0);
+
+    return {
+      totalCursos: cursosUnicos.length,
+      totalAlunos,
+      chartAlunos,
+      chartSegmento,
+      chartPorte
+    };
+  }, [data]);
+
+  if (!stats) return <div className="text-center p-8 text-slate-500">Sem dados para analisar.</div>;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 bg-blue-100 text-[#003366] rounded-xl"><BookOpen size={28} /></div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">Total de Cursos</p>
+            <h3 className="text-2xl font-bold text-[#003366]">{stats.totalCursos}</h3>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 bg-green-100 text-green-700 rounded-xl"><Users size={28} /></div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">Total de Cadastros / Empresas</p>
+            <h3 className="text-2xl font-bold text-[#003366]">{stats.totalAlunos}</h3>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Gráfico: Alunos por Curso */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <h4 className="text-lg font-bold text-[#003366] mb-6">Quantidade de Cadastros por Curso</h4>
+          <div className="h-72 w-full">
+            {stats.chartAlunos.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartAlunos} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                  <YAxis tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                  <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Bar dataKey="alunos" name="Cadastros" fill="#003366" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-slate-400">Dados insuficientes</div>
+            )}
+          </div>
+        </div>
+
+        {/* Gráfico: Porte da Empresa (MEI/ME/EPP) */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <h4 className="text-lg font-bold text-[#003366] mb-6">Distribuição de Porte (MEI, ME, EPP)</h4>
+          <div className="h-72 w-full">
+            {stats.chartPorte.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.chartPorte} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                    {stats.chartPorte.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
+                <AlertCircle className="mb-2 text-slate-300" size={24} />
+                Sem dados de Porte. Adicione uma coluna 'Porte' (com MEI, ME, EPP) na planilha.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Gráfico: Segmento (Expandido para 2 colunas) */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
+          <h4 className="text-lg font-bold text-[#003366] mb-6">Estatísticas por Segmento</h4>
+          <div className="w-full">
+            {stats.chartSegmento.length > 0 ? (
+              <div className="flex flex-col gap-8">
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.chartSegmento.slice(0, 7)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                      <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 11, fill: '#334155'}} tickLine={false} axisLine={false} />
+                      <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                      <Bar dataKey="value" name="Quantidade" fill="#14b8a6" radius={[0, 4, 4, 0]}>
+                        {stats.chartSegmento.slice(0, 7).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 2) % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Cards de Segmentos Interativos */}
+                <div className="border-t border-slate-100 pt-6">
+                  <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
+                    <Icons.MousePointerClick size={16} className="mr-2 text-teal-600" />
+                    Detalhamento (Clique nos cards para ver as empresas listadas)
+                  </h5>
+                  <div className="flex flex-wrap gap-3">
+                    {stats.chartSegmento.map((seg, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedSegment(seg)}
+                        className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-teal-50 hover:border-teal-300 hover:shadow-md transition-all duration-200 text-left group flex-grow sm:flex-grow-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)]"
+                      >
+                        <span className="font-semibold text-slate-700 group-hover:text-teal-800 transition-colors line-clamp-1 mr-3" title={seg.name}>
+                          {seg.name}
+                        </span>
+                        <span className="bg-white border border-slate-200 text-slate-600 group-hover:border-teal-200 group-hover:bg-teal-100 group-hover:text-teal-800 text-xs font-black px-2.5 py-1 rounded-full transition-colors">
+                          {seg.value}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-72 flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
+                <AlertCircle className="mb-2 text-slate-300" size={24} />
+                Sem dados de Segmento. Adicione uma coluna 'Segmento' na planilha.
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Modal de Detalhes do Segmento (Lista Completa em Cards) */}
+      {selectedSegment && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all scale-in-95">
+            
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200 bg-white">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-[#003366] flex items-center gap-2">
+                  <Icons.PieChart size={24} className="text-teal-600" />
+                  Segmento: {selectedSegment.name}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1 font-medium">
+                  {selectedSegment.value} {selectedSegment.value === 1 ? 'empresa cadastrada' : 'empresas cadastradas'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedSegment(null)} 
+                className="p-2 sm:p-3 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"
+              >
+                <Icons.X size={24}/>
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-0 flex-1 bg-white">
+              <DataGridTable items={selectedSegment.items} />
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Componente DataGridTable (Visualização em Tabela Compacta para o Modal) ---
+const DataGridTable: React.FC<{ items: DashboardLink[] }> = ({ items }) => {
+  if (items.length === 0) return null;
+
+  const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
+  const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
+  const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
+
+  const formatValue = (key: string, value: any) => {
+    if (!value && value !== 0) return "-";
+    const keyLower = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (keyLower.includes("frequencia") || keyLower.includes("percentual")) {
+      const num = Number(value);
+      if (!isNaN(num)) {
+        const percentage = num <= 1 && num > 0 ? num * 100 : num;
+        return `${percentage.toFixed(1)}%`;
+      }
+    }
+    return value;
+  };
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead className="bg-slate-50 sticky top-0 shadow-sm z-10">
+          <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+            {dynamicColumns.map(col => (
+              <th key={col} className="p-4 font-bold whitespace-nowrap">{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 text-sm">
+          {items.map((item, idx) => (
+            <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
+              {dynamicColumns.map(col => {
+                const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
+                
+                return (
+                  <td key={col} className={`p-4 max-w-xs truncate ${isFrequencia ? 'bg-blue-50/50' : ''}`} title={String(item[col] || "")}>
+                    {isFrequencia ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 font-bold text-xs">
+                        {formatValue(col, item[col])}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">{formatValue(col, item[col])}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+
+// --- Componente DataGridCards (Visualização em Cards ao invés de Tabela) ---
+const DataGridCards: React.FC<{ items: DashboardLink[] }> = ({ items }) => {
+  if (items.length === 0) return null;
+
+  const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
+  const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
+  const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
+
+  const formatValue = (key: string, value: any) => {
+    if (!value && value !== 0) return "-";
+    const keyLower = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (keyLower.includes("frequencia") || keyLower.includes("percentual")) {
+      const num = Number(value);
+      if (!isNaN(num)) {
+        const percentage = num <= 1 && num > 0 ? num * 100 : num;
+        return `${percentage.toFixed(1)}%`;
+      }
+    }
+    return value;
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+      {items.map((item) => {
+        // Encontra as colunas "Empresa" e "Nome Completo"
+        const keys = Object.keys(item);
+        const empresaKey = keys.find(k => k.toLowerCase().includes('empresa'));
+        const nomeCompletoKey = keys.find(k => k.toLowerCase().includes('nome completo'));
+
+        // Prioridade do Título Principal: Empresa > Nome Completo > Título genérico
+        const primaryTitle = (empresaKey && item[empresaKey]) 
+          ? item[empresaKey] 
+          : (item.title || 'Cadastro');
+
+        // Subtítulo: Se o título for a empresa, mostramos o Nome Completo aqui
+        const secondaryTitle = (nomeCompletoKey && item[nomeCompletoKey]) ? item[nomeCompletoKey] : null;
+
+        return (
+          <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col group">
+            <div className="mb-4 pb-4 border-b border-slate-100">
+              <h4 className="text-lg font-bold text-[#003366] leading-tight mb-1 group-hover:text-blue-600 transition-colors">
+                {primaryTitle}
+              </h4>
+              {secondaryTitle && (
+                <p className="text-sm font-medium text-slate-500 flex items-center">
+                  <Icons.User size={14} className="mr-1.5 opacity-70" />
+                  {secondaryTitle}
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-3 flex-1">
+              {dynamicColumns.map(col => {
+                // Não repete a empresa nem o nome completo se eles já estiverem no cabeçalho do Card
+                if (col === empresaKey || col === nomeCompletoKey) return null;
+
+                // Checa se a coluna é a de frequência para dar um destaque visual
+                const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
+
+                return (
+                  <div key={col} className={`flex flex-col ${isFrequencia ? 'bg-blue-50/60 p-3 rounded-xl border border-blue-100/50 mt-2' : ''}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${isFrequencia ? 'text-blue-600' : 'text-slate-400'}`}>
+                      {col}
+                    </span>
+                    <span className={`text-sm break-words ${isFrequencia ? 'text-blue-700 font-black text-lg' : 'text-slate-700'}`} title={String(item[col] || "")}>
+                      {formatValue(col, item[col])}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// --- App Principal ---
+export default function App() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>("geral");
+
+  const [customLinks, setCustomLinks] = useState<DashboardLink[]>([]);
+  const [customCategories, setCustomCategories] = useState<Category[]>([
+    { id: "geral", label: "Painel Geral", icon: PieChartIcon }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchScriptData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxfsK3EMJVzlRf7gcunahVBI5ZwVo-9a1TQaQvRz6bpMpdAEyamaxb_6LocygcZEkFc5A/exec?aba=geral";
+      const response = await fetch(WEB_APP_URL);
+      const result = await response.json();
+      
+      if (result.status === "success") {
+        const linksData: DashboardLink[] = result.data || [];
+        setCustomLinks(linksData);
+
+        const uniqueCursos = Array.from(new Set(linksData.map(l => l.curso))).filter(Boolean);
+        const dynamicCategories = uniqueCursos.map(cursoNome => ({
+          id: String(cursoNome),
+          label: String(cursoNome).charAt(0).toUpperCase() + String(cursoNome).slice(1), 
+          icon: Folder 
+        }));
+
+        setCustomCategories([
+          { id: "geral", label: "Painel Geral", icon: PieChartIcon },
+          ...dynamicCategories
+        ]);
+
+      } else {
+        setError("Erro na folha: " + (result.message || "Resposta inesperada do servidor."));
+      }
+    } catch (err) {
+      console.error("Erro na requisição:", err);
+      setError("Erro ao carregar os dados. Verifica a ligação à folha de cálculo e se o Web App está publicado e acessível.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchScriptData();
+  }, []);
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-[#003366] overflow-hidden">
+      <Sidebar 
+        isCollapsed={isSidebarCollapsed} 
+        setIsCollapsed={setIsSidebarCollapsed}
+        isMobileOpen={isMobileMenuOpen}
+        setIsMobileOpen={setIsMobileMenuOpen}
+        categories={customCategories}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+      />
+      
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative">
+        <Header 
+          toggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          activeCategoryLabel={
+            activeCategory === "geral" 
+              ? "Painel Geral de Estatísticas" 
+              : customCategories.find(c => c.id === activeCategory)?.label || activeCategory
+          }
+        />
+        
+        <main className="flex-1 p-6 lg:p-8">
+          {isLoading ? (
+            <div className="flex flex-col justify-center items-center h-full min-h-[300px]">
+              <RefreshCw className="animate-spin text-[#003366] mb-4" size={40} />
+              <p className="text-gray-500 font-medium">A analisar dados da folha...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center mt-20 text-red-600 font-medium bg-red-50 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
+              <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+              {error}
+            </div>
+          ) : (
+            <div className="w-full pb-12">
+              {customLinks.length > 0 ? (
+                activeCategory === "geral" ? (
+                  <AnalyticsDashboard data={customLinks} />
+                ) : (
+                  <DataGridCards items={customLinks.filter(l => l.curso === activeCategory)} />
+                )
+              ) : (
+                <div className="flex flex-col items-center justify-center mt-20 p-12 bg-white rounded-3xl border border-slate-200 max-w-xl mx-auto shadow-sm">
+                  <LayoutDashboard size={64} className="text-slate-200 mb-6" />
+                  <h3 className="text-xl font-bold text-[#003366] mb-2 text-center">
+                    Nenhum dado encontrado
+                  </h3>
+                  <p className="text-slate-500 mb-8 text-center max-w-sm">A folha de cálculo parece estar vazia ou sem as colunas corretas.</p>
+                  <button
+                    onClick={() => fetchScriptData()}
+                    className="bg-[#003366] text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-blue-800 transition-all hover:-translate-y-0.5"
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
