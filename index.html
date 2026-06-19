@@ -31,11 +31,18 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
+  <script>
+    Babel.registerPreset('react-classic', {
+      presets: [
+        [Babel.availablePresets.react, { runtime: "classic" }]
+      ]
+    });
+  </script>
+
+  <script type="text/babel" data-presets="react-classic">
     const { useState, useEffect, useMemo } = React;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } = window.Recharts;
     
-    // Ícones
     const IconBase = ({ size = 24, className = "", children, ...props }) => (
       <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
     );
@@ -56,7 +63,6 @@
 
     const CHART_COLORS = ['#003366', '#ffb800', '#14b8a6', '#f97316', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981'];
 
-    // Funções Utilitárias
     const censorName = (name) => {
       if (!name || typeof name !== "string") return name;
       const parts = name.trim().split(/\s+/);
@@ -71,7 +77,6 @@
 
     const formatDataValue = (key, value) => {
       if (value === null || value === undefined || value === "") return "-";
-      
       const strValue = String(value);
       const keyLower = String(key).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -87,7 +92,6 @@
       if (keyLower.includes("telefone") || keyLower.includes("celular") || keyLower.includes("contato")) {
         return censorPhone(strValue);
       }
-
       return value;
     };
 
@@ -190,7 +194,6 @@
         const meiCol = getCol(['mei']);
         const meCol = getCol(['me']); 
         const eppCol = getCol(['epp']);
-        // Detecta a coluna de gênero de forma segura
         const generoCol = getCol(['gênero', 'genero', 'sexo']);
 
         let totalAlunos = 0;
@@ -228,7 +231,6 @@
             if (!meCol && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
           }
 
-          // Lógica robusta para contagem de gênero
           if (generoCol) {
             const g = String(item[generoCol] || '').trim().toUpperCase();
             if (g === 'M' || g === 'MASCULINO') countMasc++;
@@ -270,7 +272,6 @@
 
       return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
-          {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center space-x-4">
               <div className="p-3 bg-blue-100 text-[#003366] rounded-xl"><BookOpen size={28} /></div>
@@ -289,8 +290,6 @@
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Gráfico Alunos (Largura Total) */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Quantidade de Cadastros por Curso</h4>
               <div className="h-96 w-full">
@@ -320,7 +319,6 @@
               </div>
             </div>
 
-            {/* Gráfico Porte */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Distribuição de Porte (MEI, ME, EPP)</h4>
               <div className="h-72 w-full">
@@ -345,7 +343,6 @@
               </div>
             </div>
 
-            {/* Gráfico Gênero */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Distribuição por Gênero</h4>
               <div className="h-72 w-full">
@@ -370,7 +367,6 @@
               </div>
             </div>
 
-            {/* Gráfico Segmento */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Estatísticas por Segmento</h4>
               <div className="w-full">
@@ -499,7 +495,7 @@
 
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-          {items.map((item) => {
+          {items.map((item, idx) => {
             const keys = Object.keys(item);
             const empresaKey = keys.find(k => String(k).toLowerCase().includes('empresa'));
             const nomeCompletoKey = keys.find(k => String(k).toLowerCase().includes('nome'));
@@ -509,7 +505,7 @@
             const secondaryTitle = rawSecondary ? censorName(String(rawSecondary)) : null;
 
             return (
-              <div key={item.id || Math.random()} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col group">
+              <div key={item.id || idx} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col group">
                 <div className="mb-4 pb-4 border-b border-slate-100">
                   <h4 className="text-lg font-bold text-[#003366] leading-tight mb-1 group-hover:text-blue-600 transition-colors">
                     {primaryTitle}
@@ -570,7 +566,7 @@
             result = JSON.parse(rawText);
           } catch(e) {
             console.error("Falha ao analisar JSON:", rawText);
-            throw new Error("Erro de conexão com o Google. Verifique se publicou o Web App (Nova Implementação) como 'Qualquer pessoa'.");
+            throw new Error("Erro de conexão com o Google.");
           }
           
           if (result.status === "success") {
