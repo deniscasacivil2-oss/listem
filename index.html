@@ -283,6 +283,8 @@
         let countMei = 0, countMe = 0, countEpp = 0;
         let countMasc = 0, countFem = 0;
 
+        const segmentNamesMap = {}; // Mapa inteligente para unificar nomes de segmentos
+
         data.forEach(item => {
           const curso = item.curso || 'Sem Curso Atribuído';
           const alunos = alunosCol ? (Number(item[alunosCol]) || 0) : 1;
@@ -298,8 +300,14 @@
               const lng = parseFloat(nums[1].replace(',', '.'));
               if (!isNaN(lat) && !isNaN(lng)) {
                 const keys = Object.keys(item);
-                const empresaKey = keys.find(k => k.toLowerCase().includes('empresa') || k.toLowerCase().includes('razao') || k.toLowerCase().includes('razão'));
-                const nomeKey = keys.find(k => k.toLowerCase().includes('nome'));
+                const empresaKey = keys.find(k => {
+                  const lower = k.toLowerCase();
+                  return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte'));
+                });
+                const nomeKey = keys.find(k => {
+                  const lower = k.toLowerCase();
+                  return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão');
+                });
                 const enderecoKey = keys.find(k => k.toLowerCase().includes('endereço') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('rua') || k.toLowerCase().includes('logradouro'));
                 
                 mapLocations.push({
@@ -314,10 +322,30 @@
           }
 
           if (segmentoCol) {
-            const seg = String(item[segmentoCol] || 'Não Informado').trim();
-            if (seg) {
-              if (!segmentoData[seg]) segmentoData[seg] = [];
-              segmentoData[seg].push(item);
+            const rawSeg = String(item[segmentoCol] || 'Não Informado').trim();
+            if (rawSeg) {
+              // Normaliza: remove acentos e deixa tudo minúsculo
+              let cleanedSeg = rawSeg.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+              
+              // Unifica plurais/singulares comuns para evitar duplicados
+              if (cleanedSeg === 'servicos') cleanedSeg = 'servico';
+              if (cleanedSeg === 'comercios') cleanedSeg = 'comercio';
+              if (cleanedSeg === 'industrias') cleanedSeg = 'industria';
+
+              // Define o nome de exibição oficial e formata a primeira letra para maiúscula
+              let displayName = segmentNamesMap[cleanedSeg];
+              if (!displayName) {
+                if (cleanedSeg === 'comercio') displayName = 'Comércio';
+                else if (cleanedSeg === 'servico') displayName = 'Serviços';
+                else if (cleanedSeg === 'industria') displayName = 'Indústria';
+                else if (cleanedSeg === 'agronegocio') displayName = 'Agronegócio';
+                else displayName = rawSeg.charAt(0).toUpperCase() + rawSeg.slice(1);
+                
+                segmentNamesMap[cleanedSeg] = displayName;
+              }
+
+              if (!segmentoData[displayName]) segmentoData[displayName] = [];
+              segmentoData[displayName].push(item);
             }
           }
 
@@ -452,23 +480,6 @@
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
-              <h4 className="text-lg font-bold text-[#003366] mb-6 flex items-center">
-                <MapPin size={24} className="mr-2 text-teal-600" />
-                Geolocalização dos Cadastros
-              </h4>
-              <div className="h-[400px] w-full relative z-0">
-                {stats.mapLocations && stats.mapLocations.length > 0 ? (
-                  <MapView locations={stats.mapLocations} />
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4 border-2 border-dashed border-slate-100 rounded-xl">
-                    <AlertCircle className="mb-2 text-slate-300" size={24} />
-                    Sem dados de Coordenadas válidos encontrados na planilha.
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Distribuição de Porte (MEI, ME, EPP)</h4>
               <div className="h-72 w-full">
@@ -512,6 +523,23 @@
                   <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
                     <AlertCircle className="mb-2 text-slate-300" size={24} />
                     Sem dados de Gênero na planilha.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
+              <h4 className="text-lg font-bold text-[#003366] mb-6 flex items-center">
+                <MapPin size={24} className="mr-2 text-teal-600" />
+                Geolocalização dos Cadastros
+              </h4>
+              <div className="h-[400px] w-full relative z-0">
+                {stats.mapLocations && stats.mapLocations.length > 0 ? (
+                  <MapView locations={stats.mapLocations} />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4 border-2 border-dashed border-slate-100 rounded-xl">
+                    <AlertCircle className="mb-2 text-slate-300" size={24} />
+                    Sem dados de Coordenadas válidos encontrados na planilha.
                   </div>
                 )}
               </div>
@@ -633,8 +661,14 @@
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
           {items.map((item) => {
             const keys = Object.keys(item);
-            const empresaKey = keys.find(k => k.toLowerCase().includes('empresa') || k.toLowerCase().includes('razao') || k.toLowerCase().includes('razão'));
-            const nomeCompletoKey = keys.find(k => k.toLowerCase().includes('nome'));
+            const empresaKey = keys.find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte'));
+            });
+            const nomeCompletoKey = keys.find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão');
+            });
 
             const primaryTitle = (empresaKey && item[empresaKey]) 
               ? item[empresaKey] 
