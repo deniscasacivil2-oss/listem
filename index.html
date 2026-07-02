@@ -258,6 +258,35 @@
     function AnalyticsDashboard({ data }) {
       const [selectedSegment, setSelectedSegment] = useState(null);
 
+      // Componente customizado para quebrar os títulos muito compridos em várias linhas
+      const CustomXAxisTick = ({ x, y, payload }) => {
+        const words = payload.value.split(' ');
+        let lines = [];
+        let currentLine = '';
+        
+        words.forEach(word => {
+          if (currentLine.length + word.length > 18 && currentLine !== '') {
+            lines.push(currentLine.trim());
+            currentLine = word + ' ';
+          } else {
+            currentLine += word + ' ';
+          }
+        });
+        if (currentLine) lines.push(currentLine.trim());
+
+        return (
+          <g transform={`translate(${x},${y})`}>
+            <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={11} transform="rotate(-45)">
+              {lines.map((line, index) => (
+                <tspan x={0} dy={index === 0 ? 0 : 14} key={index}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          </g>
+        );
+      };
+
       const stats = useMemo(() => {
         if (!data || data.length === 0) return null;
 
@@ -425,19 +454,17 @@
             
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Quantidade de Cadastros por Curso</h4>
-              <div className="h-96 w-full">
+              <div className="h-[450px] w-full">
                 {stats.chartAlunos.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.chartAlunos} margin={{ top: 25, right: 10, left: -20, bottom: 80 }}>
+                    <BarChart data={stats.chartAlunos} margin={{ top: 25, right: 10, left: -20, bottom: 120 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis 
                         dataKey="name" 
-                        tick={{fontSize: 11, fill: '#64748b'}} 
+                        tick={<CustomXAxisTick />}
                         tickLine={false} 
                         axisLine={false}
                         interval={0}
-                        angle={-45}
-                        textAnchor="end"
                       />
                       <YAxis tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
                       <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
