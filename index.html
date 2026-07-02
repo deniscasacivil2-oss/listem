@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Casa Civil</title>
+  <title>Dashboard Olímpia +Empreendedora</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,13 +12,13 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   
-  <!-- PropTypes -->
+  <!-- PropTypes (Dependência do Recharts) -->
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
 
   <!-- Recharts -->
   <script src="https://unpkg.com/recharts@2.10.4/umd/Recharts.js"></script>
   
-  <!-- Babel -->
+  <!-- Babel para transpilar JSX no browser -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
@@ -31,36 +31,31 @@
 <body>
   <div id="root"></div>
 
-  <script>
-    Babel.registerPreset('react-classic', {
-      presets: [
-        [Babel.availablePresets.react, { runtime: "classic" }]
-      ]
-    });
-  </script>
-
-  <script type="text/babel" data-presets="react-classic">
-    const { useState, useEffect, useMemo } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef, Fragment } = React;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } = window.Recharts;
     
     const IconBase = ({ size = 24, className = "", children, ...props }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+        {children}
+      </svg>
     );
 
     const LayoutDashboard = (p) => <IconBase {...p}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></IconBase>;
     const AlertCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
     const RefreshCw = (p) => <IconBase {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconBase>;
-    const Menu = (p) => <IconBase {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>;
+    const MenuIcon = (p) => <IconBase {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>;
     const ChevronLeft = (p) => <IconBase {...p}><polyline points="15 18 9 12 15 6"/></IconBase>;
     const ChartLine = (p) => <IconBase {...p}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></IconBase>;
-    const X = (p) => <IconBase {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
-    const Folder = (p) => <IconBase {...p}><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></IconBase>;
-    const Users = (p) => <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+    const XIcon = (p) => <IconBase {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+    const FolderIcon = (p) => <IconBase {...p}><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></IconBase>;
+    const UsersIcon = (p) => <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
     const PieChartIcon = (p) => <IconBase {...p}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></IconBase>;
     const BookOpen = (p) => <IconBase {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
-    const User = (p) => <IconBase {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+    const UserIcon = (p) => <IconBase {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
     const MousePointerClick = (p) => <IconBase {...p}><path d="m9 9 5 12 1.77-5.23L21 14Z"/><path d="m16.07 16.07 4.24 4.24"/><path d="M7.19 4.19 8.6 5.6"/><path d="M4.19 7.19 5.6 8.6"/><path d="M2 12h2"/><path d="M12 2v2"/></IconBase>;
-
+    const MapPin = (p) => <IconBase {...p}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+    
     const CHART_COLORS = ['#003366', '#ffb800', '#14b8a6', '#f97316', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981'];
 
     const censorName = (name) => {
@@ -77,21 +72,25 @@
 
     const formatDataValue = (key, value) => {
       if (value === null || value === undefined || value === "") return "-";
+      
       const strValue = String(value);
-      const keyLower = String(key).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const keyLower = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
       if (keyLower.includes("frequencia") || keyLower.includes("percentual")) {
         const num = Number(value);
-        if (!isNaN(num)) return `${(num <= 1 && num > 0 ? num * 100 : num).toFixed(1)}%`;
+        if (!isNaN(num)) {
+          return `${(num <= 1 && num > 0 ? num * 100 : num).toFixed(1)}%`;
+        }
       }
 
-      if ((keyLower.includes("nome") && !keyLower.includes("empresa")) || keyLower.includes("aluno")) {
+      if ((keyLower.includes("nome") && !keyLower.includes("empresa") && !keyLower.includes("razao") && !keyLower.includes("razão")) || keyLower.includes("aluno")) {
         return censorName(strValue);
       }
 
       if (keyLower.includes("telefone") || keyLower.includes("celular") || keyLower.includes("contato")) {
         return censorPhone(strValue);
       }
+
       return value;
     };
 
@@ -100,7 +99,7 @@
         <header className="bg-white border-b h-16 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30 shadow-sm flex-shrink-0">
           <div className="flex items-center space-x-4">
             <button onClick={toggleMobileMenu} className="md:hidden text-[#003366] hover:bg-gray-100 p-2 rounded-md">
-              <Menu size={24} />
+              <MenuIcon size={24} />
             </button>
             <h1 className="text-lg lg:text-xl font-bold text-[#003366] uppercase tracking-tight flex items-center">
               <span className="text-gray-600">{activeCategoryLabel}</span>
@@ -122,8 +121,11 @@
       };
 
       return (
-        <React.Fragment>
-          {isMobileOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileOpen(false)} />}
+        <Fragment>
+          {isMobileOpen && (
+            <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileOpen(false)} />
+          )}
+
           <aside className={`bg-[#003366] text-white flex-shrink-0 flex flex-col fixed md:sticky top-0 h-screen z-50 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
             <div className="flex items-center justify-between p-4 border-b border-blue-900 min-h-[64px]">
               {!isCollapsed && (
@@ -132,8 +134,8 @@
                     <img src="https://pt.wikipedia.org/wiki/Special:FilePath/Bras%C3%A3o_de_Ol%C3%ADmpia,_SP.jpg" alt="Prefeitura" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-bold text-sm leading-tight tracking-wide">OLÍMPIA</span>
-                    <span className="text-[10px] text-blue-300 uppercase tracking-widest">+EMPEENDEDORA</span>
+                    <span className="font-bold text-sm leading-tight tracking-wide">CURSOS</span>
+                    <span className="text-[10px] text-blue-300 uppercase tracking-widest">Sebrae</span>
                   </div>
                 </div>
               )}
@@ -141,40 +143,117 @@
                 <ChevronLeft size={20} className={`transform transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
               </button>
               <button onClick={() => setIsMobileOpen(false)} className="md:hidden p-2 rounded hover:bg-blue-800 text-blue-200 ml-auto">
-                <X size={20} />
+                <XIcon size={20} />
               </button>
             </div>
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`w-full flex items-center transition-all duration-200 rounded-lg whitespace-nowrap overflow-hidden ${isCollapsed ? "justify-center p-3" : "p-3"} ${activeCategory === cat.id ? "bg-[#ffb800] text-[#003366] font-semibold shadow-md" : "text-blue-100 hover:bg-blue-800"}`}
-                  title={isCollapsed ? cat.label : ""}
-                >
-                  <cat.icon size={20} className={`flex-shrink-0 ${isCollapsed ? "" : "mr-3"}`} />
-                  <span className={`text-sm transition-all duration-300 ${isCollapsed ? "opacity-0 w-0" : "opacity-100"}`}>
-                    {cat.label}
-                  </span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const IconComponent = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className={`w-full flex items-center transition-all duration-200 rounded-lg whitespace-nowrap overflow-hidden ${isCollapsed ? "justify-center p-3" : "p-3"} ${activeCategory === cat.id ? "bg-[#ffb800] text-[#003366] font-semibold shadow-md" : "text-blue-100 hover:bg-blue-800"}`}
+                    title={isCollapsed ? cat.label : ""}
+                  >
+                    <IconComponent size={20} className={`flex-shrink-0 ${isCollapsed ? "" : "mr-3"}`} />
+                    <span className={`text-sm transition-all duration-300 ${isCollapsed ? "opacity-0 w-0" : "opacity-100"}`}>
+                      {cat.label}
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
 
             <div className={`p-6 bg-blue-950 text-[10px] text-blue-300 mt-auto border-t border-blue-900 transition-all duration-300 flex flex-col flex-shrink-0 ${isCollapsed ? "items-center text-center" : "items-start text-left"}`}>
               {isCollapsed ? (
                 <ChartLine size={20} className="text-blue-300" title="Cursos Sebrae" />
               ) : (
-                <React.Fragment>
+                <Fragment>
                   <p className="font-bold mb-3 uppercase tracking-wider text-blue-200">Divisão de Análise de Dados e Indicadores|Casa Civil</p>
                   <ChartLine size={16} className="mb-2" />
-                </React.Fragment>
+                </Fragment>
               )}
             </div>
           </aside>
-        </React.Fragment>
+        </Fragment>
       );
     }
+
+    const MapView = ({ locations }) => {
+      const mapRef = useRef(null);
+      const mapInstance = useRef(null);
+      const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
+
+      useEffect(() => {
+        if (!document.querySelector('link[href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"]')) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+
+        if (!window.L) {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.onload = () => setIsLeafletLoaded(true);
+          document.head.appendChild(script);
+        } else {
+          setIsLeafletLoaded(true);
+        }
+      }, []);
+
+      useEffect(() => {
+        if (!isLeafletLoaded || !mapRef.current) return;
+        
+        const L = window.L;
+
+        if (!mapInstance.current) {
+          mapInstance.current = L.map(mapRef.current).setView([-20.7383, -48.9108], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(mapInstance.current);
+        }
+
+        mapInstance.current.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            mapInstance.current.removeLayer(layer);
+          }
+        });
+
+        const customIcon = new L.Icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+        });
+
+        const bounds = [];
+        locations.forEach(loc => {
+          const popupHtml = `
+            <div style="font-family: inherit; color: #334155; min-width: 200px;">
+              ${loc.empresa && loc.empresa !== 'Não informada' ? `<div style="font-size: 14px; font-weight: bold; color: #003366; margin-bottom: 4px;">${loc.empresa}</div>` : ''}
+              ${loc.nome && loc.nome !== 'Não informado' ? `<div style="font-size: 12px; margin-bottom: 2px;"><strong>Nome:</strong> ${loc.nome}</div>` : ''}
+              ${loc.endereco && loc.endereco !== 'Não informado' ? `<div style="font-size: 12px;"><strong>Endereço:</strong> ${loc.endereco}</div>` : ''}
+            </div>
+          `;
+          L.marker([loc.lat, loc.lng], { icon: customIcon })
+           .addTo(mapInstance.current)
+           .bindPopup(popupHtml);
+          bounds.push([loc.lat, loc.lng]);
+        });
+
+        if (bounds.length > 0) {
+          mapInstance.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+      }, [locations, isLeafletLoaded]);
+
+      return (
+        <div ref={mapRef} className="w-full h-full rounded-xl z-0" style={{ zIndex: 0 }} />
+      );
+    };
 
     function AnalyticsDashboard({ data }) {
       const [selectedSegment, setSelectedSegment] = useState(null);
@@ -184,23 +263,25 @@
 
         const getCol = (keywords) => {
           return Object.keys(data[0]).find(key => 
-            keywords.some(kw => String(key).toLowerCase().includes(kw))
+            keywords.some(kw => key.toLowerCase().includes(kw))
           );
         };
 
         const alunosCol = getCol(['aluno', 'quantidade', 'vaga']);
         const segmentoCol = getCol(['segmento', 'setor', 'ramo']);
         const porteCol = getCol(['porte', 'tamanho']);
+        const generoCol = getCol(['gênero', 'genero', 'sexo']);
         const meiCol = getCol(['mei']);
         const meCol = getCol(['me']); 
         const eppCol = getCol(['epp']);
-        const generoCol = getCol(['gênero', 'genero', 'sexo']);
+        const coordenadasCol = getCol(['coordenada', 'gps', 'latitude', 'latlong']);
 
         let totalAlunos = 0;
         const alunosPorCurso = {};
         const segmentoData = {};
+        const mapLocations = [];
         let countMei = 0, countMe = 0, countEpp = 0;
-        let countMasc = 0, countFem = 0, countOutros = 0;
+        let countMasc = 0, countFem = 0;
 
         data.forEach(item => {
           const curso = item.curso || 'Sem Curso Atribuído';
@@ -209,12 +290,41 @@
           totalAlunos += alunos;
           alunosPorCurso[curso] = (alunosPorCurso[curso] || 0) + alunos;
 
+          if (coordenadasCol && item[coordenadasCol]) {
+            const coordStr = String(item[coordenadasCol]).trim();
+            const nums = coordStr.match(/-?\d+(?:[\.,]\d+)?/g);
+            if (nums && nums.length >= 2) {
+              const lat = parseFloat(nums[0].replace(',', '.'));
+              const lng = parseFloat(nums[1].replace(',', '.'));
+              if (!isNaN(lat) && !isNaN(lng)) {
+                const keys = Object.keys(item);
+                const empresaKey = keys.find(k => k.toLowerCase().includes('empresa') || k.toLowerCase().includes('razao') || k.toLowerCase().includes('razão'));
+                const nomeKey = keys.find(k => k.toLowerCase().includes('nome'));
+                const enderecoKey = keys.find(k => k.toLowerCase().includes('endereço') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('rua') || k.toLowerCase().includes('logradouro'));
+                
+                mapLocations.push({
+                  lat,
+                  lng,
+                  nome: (nomeKey && item[nomeKey]) ? censorName(String(item[nomeKey])) : 'Não informado',
+                  empresa: (empresaKey && item[empresaKey]) ? String(item[empresaKey]) : 'Não informada',
+                  endereco: (enderecoKey && item[enderecoKey]) ? String(item[enderecoKey]) : 'Não informado'
+                });
+              }
+            }
+          }
+
           if (segmentoCol) {
             const seg = String(item[segmentoCol] || 'Não Informado').trim();
             if (seg) {
               if (!segmentoData[seg]) segmentoData[seg] = [];
               segmentoData[seg].push(item);
             }
+          }
+
+          if (generoCol) {
+            const genText = String(item[generoCol]).toUpperCase().trim();
+            if (genText === 'M' || genText === 'MASCULINO') countMasc++;
+            else if (genText === 'F' || genText === 'FEMININO') countFem++;
           }
 
           if (porteCol) {
@@ -229,13 +339,6 @@
             if (!meiCol && allVals.includes('MEI')) countMei++;
             if (!eppCol && allVals.includes('EPP')) countEpp++;
             if (!meCol && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
-          }
-
-          if (generoCol) {
-            const g = String(item[generoCol] || '').trim().toUpperCase();
-            if (g === 'M' || g === 'MASCULINO') countMasc++;
-            else if (g === 'F' || g === 'FEMININO') countFem++;
-            else if (g !== '') countOutros++;
           }
         });
 
@@ -254,8 +357,7 @@
 
         const chartGenero = [
           { name: 'Masculino', value: countMasc },
-          { name: 'Feminino', value: countFem },
-          { name: 'Outros', value: countOutros }
+          { name: 'Feminino', value: countFem }
         ].filter(d => d.value > 0);
 
         return {
@@ -264,7 +366,8 @@
           chartAlunos,
           chartSegmento,
           chartPorte,
-          chartGenero
+          chartGenero,
+          mapLocations
         };
       }, [data]);
 
@@ -272,6 +375,7 @@
 
       return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center space-x-4">
               <div className="p-3 bg-blue-100 text-[#003366] rounded-xl"><BookOpen size={28} /></div>
@@ -281,7 +385,7 @@
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center space-x-4">
-              <div className="p-3 bg-green-100 text-green-700 rounded-xl"><Users size={28} /></div>
+              <div className="p-3 bg-green-100 text-green-700 rounded-xl"><UsersIcon size={28} /></div>
               <div>
                 <p className="text-sm text-slate-500 font-medium">Total de Cadastros / Empresas</p>
                 <h3 className="text-2xl font-bold text-[#003366]">{stats.totalAlunos}</h3>
@@ -290,12 +394,13 @@
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
               <h4 className="text-lg font-bold text-[#003366] mb-6">Quantidade de Cadastros por Curso</h4>
               <div className="h-96 w-full">
                 {stats.chartAlunos.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.chartAlunos} margin={{ top: 20, right: 10, left: -20, bottom: 80 }}>
+                    <BarChart data={stats.chartAlunos} margin={{ top: 25, right: 10, left: -20, bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis 
                         dataKey="name" 
@@ -309,12 +414,57 @@
                       <YAxis tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
                       <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                       <Bar dataKey="alunos" name="Cadastros" fill="#003366" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="alunos" position="top" fill="#003366" fontSize={12} fontWeight="bold" />
+                         <LabelList dataKey="alunos" position="top" fill="#003366" fontSize={12} fontWeight="bold" />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex items-center justify-center text-sm text-slate-400">Dados insuficientes</div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
+              <h4 className="text-lg font-bold text-[#003366] mb-6">Estatísticas por Segmento</h4>
+              <div className="w-full">
+                {stats.chartSegmento.length > 0 ? (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats.chartSegmento.slice(0, 7)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                        <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                        <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 11, fill: '#334155'}} tickLine={false} axisLine={false} />
+                        <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                        <Bar dataKey="value" name="Quantidade" fill="#14b8a6" radius={[0, 4, 4, 0]}>
+                          {stats.chartSegmento.slice(0, 7).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 2) % CHART_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-72 flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
+                    <AlertCircle className="mb-2 text-slate-300" size={24} />
+                    Sem dados de Segmento na planilha.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
+              <h4 className="text-lg font-bold text-[#003366] mb-6 flex items-center">
+                <MapPin size={24} className="mr-2 text-teal-600" />
+                Geolocalização dos Cadastros
+              </h4>
+              <div className="h-[400px] w-full relative z-0">
+                {stats.mapLocations && stats.mapLocations.length > 0 ? (
+                  <MapView locations={stats.mapLocations} />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4 border-2 border-dashed border-slate-100 rounded-xl">
+                    <AlertCircle className="mb-2 text-slate-300" size={24} />
+                    Sem dados de Coordenadas válidos encontrados na planilha.
+                  </div>
                 )}
               </div>
             </div>
@@ -337,7 +487,7 @@
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
                     <AlertCircle className="mb-2 text-slate-300" size={24} />
-                    Sem dados de Porte.
+                    Sem dados de Porte na planilha.
                   </div>
                 )}
               </div>
@@ -349,9 +499,9 @@
                 {stats.chartGenero.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={stats.chartGenero} cx="50%" cy="50%" innerRadius={0} outerRadius={90} paddingAngle={2} dataKey="value">
+                      <Pie data={stats.chartGenero} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
                         {stats.chartGenero.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={['#3b82f6', '#ec4899', '#8b5cf6'][index % 3]} />
+                          <Cell key={`cell-${index}`} fill={entry.name === 'Feminino' ? '#8b5cf6' : '#3b82f6'} />
                         ))}
                       </Pie>
                       <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
@@ -361,64 +511,40 @@
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
                     <AlertCircle className="mb-2 text-slate-300" size={24} />
-                    Sem dados de Gênero. Adicione uma coluna 'Gênero' na planilha.
+                    Sem dados de Gênero na planilha.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
-              <h4 className="text-lg font-bold text-[#003366] mb-6">Estatísticas por Segmento</h4>
-              <div className="w-full">
-                {stats.chartSegmento.length > 0 ? (
-                  <div className="flex flex-col gap-8">
-                    <div className="h-72 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.chartSegmento.slice(0, 7)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                          <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
-                          <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 11, fill: '#334155'}} tickLine={false} axisLine={false} />
-                          <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                          <Bar dataKey="value" name="Quantidade" fill="#14b8a6" radius={[0, 4, 4, 0]}>
-                            {stats.chartSegmento.slice(0, 7).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 2) % CHART_COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+          </div>
 
-                    <div className="border-t border-slate-100 pt-6">
-                      <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
-                        <MousePointerClick size={16} className="mr-2 text-teal-600" />
-                        Detalhamento (Clique nos cards para ver as empresas)
-                      </h5>
-                      <div className="flex flex-wrap gap-3">
-                        {stats.chartSegmento.map((seg, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setSelectedSegment(seg)}
-                            className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-teal-50 hover:border-teal-300 hover:shadow-md transition-all duration-200 text-left group flex-grow sm:flex-grow-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)]"
-                          >
-                            <span className="font-semibold text-slate-700 group-hover:text-teal-800 transition-colors line-clamp-1 mr-3" title={seg.name}>
-                              {seg.name}
-                            </span>
-                            <span className="bg-white border border-slate-200 text-slate-600 group-hover:border-teal-200 group-hover:bg-teal-100 group-hover:text-teal-800 text-xs font-black px-2.5 py-1 rounded-full transition-colors">
-                              {seg.value}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-72 flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
-                    <AlertCircle className="mb-2 text-slate-300" size={24} />
-                    Sem dados de Segmento.
-                  </div>
-                )}
+          {/* Cards de Detalhamento Movidos para o Final */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6">
+            <h4 className="text-lg font-bold text-[#003366] mb-6 flex items-center">
+              <MousePointerClick size={24} className="mr-2 text-teal-600" />
+              Detalhamento por Segmento (Clique nos cards para ver as empresas listadas)
+            </h4>
+            {stats.chartSegmento.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {stats.chartSegmento.map((seg, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedSegment(seg)}
+                    className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-teal-50 hover:border-teal-300 hover:shadow-md transition-all duration-200 text-left group flex-grow sm:flex-grow-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)]"
+                  >
+                    <span className="font-semibold text-slate-700 group-hover:text-teal-800 transition-colors line-clamp-1 mr-3" title={seg.name}>
+                      {seg.name}
+                    </span>
+                    <span className="bg-white border border-slate-200 text-slate-600 group-hover:border-teal-200 group-hover:bg-teal-100 group-hover:text-teal-800 text-xs font-black px-2.5 py-1 rounded-full transition-colors">
+                      {seg.value}
+                    </span>
+                  </button>
+                ))}
               </div>
-            </div>
+            ) : (
+              <div className="text-sm text-slate-400">Sem dados de Segmento na planilha.</div>
+            )}
           </div>
 
           {selectedSegment && (
@@ -434,8 +560,11 @@
                       {selectedSegment.value} {selectedSegment.value === 1 ? 'empresa cadastrada' : 'empresas cadastradas'}
                     </p>
                   </div>
-                  <button onClick={() => setSelectedSegment(null)} className="p-2 sm:p-3 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0">
-                    <X size={24}/>
+                  <button 
+                    onClick={() => setSelectedSegment(null)} 
+                    className="p-2 sm:p-3 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"
+                  >
+                    <XIcon size={24}/>
                   </button>
                 </div>
                 <div className="overflow-y-auto p-0 flex-1 bg-white">
@@ -450,9 +579,10 @@
 
     function DataGridTable({ items }) {
       if (!items || items.length === 0) return null;
+
       const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
       const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
-      const dynamicColumns = allKeys.filter(key => key !== "" && !specialKeys.includes(String(key).toLowerCase()));
+      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
 
       return (
         <div className="w-full overflow-x-auto">
@@ -468,14 +598,19 @@
               {items.map((item, idx) => (
                 <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
                   {dynamicColumns.map(col => {
-                    const keyLower = String(col).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
                     const formatted = formatDataValue(col, item[col]);
+                    
                     return (
                       <td key={col} className={`p-4 max-w-xs truncate ${isFrequencia ? 'bg-blue-50/50' : ''}`} title={String(item[col] || "")}>
                         {isFrequencia ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 font-bold text-xs">{formatted}</span>
-                        ) : (<span className="text-slate-600">{formatted}</span>)}
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 font-bold text-xs">
+                            {formatted}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">{formatted}</span>
+                        )}
                       </td>
                     );
                   })}
@@ -489,38 +624,44 @@
 
     function DataGridCards({ items }) {
       if (!items || items.length === 0) return null;
+
       const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
       const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
-      const dynamicColumns = allKeys.filter(key => key !== "" && !specialKeys.includes(String(key).toLowerCase()));
+      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
 
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-          {items.map((item, idx) => {
+          {items.map((item) => {
             const keys = Object.keys(item);
-            const empresaKey = keys.find(k => String(k).toLowerCase().includes('empresa'));
-            const nomeCompletoKey = keys.find(k => String(k).toLowerCase().includes('nome'));
+            const empresaKey = keys.find(k => k.toLowerCase().includes('empresa') || k.toLowerCase().includes('razao') || k.toLowerCase().includes('razão'));
+            const nomeCompletoKey = keys.find(k => k.toLowerCase().includes('nome'));
 
-            const primaryTitle = (empresaKey && item[empresaKey]) ? item[empresaKey] : (item.title || 'Cadastro');
+            const primaryTitle = (empresaKey && item[empresaKey]) 
+              ? item[empresaKey] 
+              : (item.title || 'Cadastro');
+
             const rawSecondary = (nomeCompletoKey && item[nomeCompletoKey]) ? item[nomeCompletoKey] : null;
             const secondaryTitle = rawSecondary ? censorName(String(rawSecondary)) : null;
 
             return (
-              <div key={item.id || idx} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col group">
+              <div key={item.id || Math.random()} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col group">
                 <div className="mb-4 pb-4 border-b border-slate-100">
                   <h4 className="text-lg font-bold text-[#003366] leading-tight mb-1 group-hover:text-blue-600 transition-colors">
                     {primaryTitle}
                   </h4>
                   {secondaryTitle && (
                     <p className="text-sm font-medium text-slate-500 flex items-center">
-                      <User size={14} className="mr-1.5 opacity-70" />
+                      <UserIcon size={14} className="mr-1.5 opacity-70" />
                       {secondaryTitle}
                     </p>
                   )}
                 </div>
+                
                 <div className="space-y-3 flex-1">
                   {dynamicColumns.map(col => {
                     if (col === empresaKey || col === nomeCompletoKey) return null;
-                    const keyLower = String(col).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                    const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
                     const formatted = formatDataValue(col, item[col]);
 
@@ -549,7 +690,9 @@
       const [activeCategory, setActiveCategory] = useState("geral");
 
       const [customLinks, setCustomLinks] = useState([]);
-      const [customCategories, setCustomCategories] = useState([{ id: "geral", label: "Painel Geral", icon: PieChartIcon }]);
+      const [customCategories, setCustomCategories] = useState([
+        { id: "geral", label: "Painel Geral", icon: PieChartIcon }
+      ]);
       const [isLoading, setIsLoading] = useState(false);
       const [error, setError] = useState(null);
 
@@ -565,8 +708,7 @@
           try {
             result = JSON.parse(rawText);
           } catch(e) {
-            console.error("Falha ao analisar JSON:", rawText);
-            throw new Error("Erro de conexão com o Google.");
+            throw new Error("A resposta não é um JSON válido. Verifique a permissão do Google Apps Script.");
           }
           
           if (result.status === "success") {
@@ -577,44 +719,83 @@
             const dynamicCategories = uniqueCursos.map(cursoNome => ({
               id: String(cursoNome),
               label: String(cursoNome).charAt(0).toUpperCase() + String(cursoNome).slice(1), 
-              icon: Folder 
+              icon: FolderIcon 
             }));
 
-            setCustomCategories([{ id: "geral", label: "Painel Geral", icon: PieChartIcon }, ...dynamicCategories]);
+            setCustomCategories([
+              { id: "geral", label: "Painel Geral", icon: PieChartIcon },
+              ...dynamicCategories
+            ]);
+
           } else {
             setError("Erro na folha: " + (result.message || "Resposta inesperada do servidor."));
           }
         } catch (err) {
-          setError(err.message || "Erro ao carregar os dados. Verifique a sua conexão.");
+          console.error(err);
+          setError("Erro ao carregar os dados. Verifique a ligação à folha de cálculo e se a permissão está definida para 'Qualquer Pessoa'.");
         } finally {
           setIsLoading(false);
         }
       };
 
-      useEffect(() => { fetchScriptData(); }, []);
+      useEffect(() => {
+        fetchScriptData();
+      }, []);
 
       return (
         <div className="flex h-screen bg-slate-50 font-sans text-[#003366] overflow-hidden">
-          <Sidebar isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} categories={customCategories} activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            setIsCollapsed={setIsSidebarCollapsed}
+            isMobileOpen={isMobileMenuOpen}
+            setIsMobileOpen={setIsMobileMenuOpen}
+            categories={customCategories}
+            activeCategory={activeCategory}
+            setActiveCategory={setActiveCategory}
+          />
           
           <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative">
-            <Header toggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)} activeCategoryLabel={activeCategory === "geral" ? "Painel Geral de Estatísticas" : customCategories.find(c => c.id === activeCategory)?.label || activeCategory} />
+            <Header 
+              toggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              activeCategoryLabel={
+                activeCategory === "geral" 
+                  ? "Painel Geral de Estatísticas" 
+                  : customCategories.find(c => c.id === activeCategory)?.label || activeCategory
+              }
+            />
             
             <main className="flex-1 p-6 lg:p-8">
               {isLoading ? (
-                <div className="flex flex-col justify-center items-center h-full min-h-[300px]"><RefreshCw className="animate-spin text-[#003366] mb-4" size={40} /><p className="text-gray-500 font-medium">A analisar dados da folha...</p></div>
+                <div className="flex flex-col justify-center items-center h-full min-h-[300px]">
+                  <RefreshCw className="animate-spin text-[#003366] mb-4" size={40} />
+                  <p className="text-gray-500 font-medium">A analisar dados da folha...</p>
+                </div>
               ) : error ? (
-                <div className="text-center mt-20 text-red-600 font-medium bg-red-50 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto"><AlertCircle className="mx-auto mb-4 text-red-500" size={48} />{error}</div>
+                <div className="text-center mt-20 text-red-600 font-medium bg-red-50 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
+                  <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+                  {error}
+                </div>
               ) : (
                 <div className="w-full pb-12">
                   {customLinks.length > 0 ? (
-                    activeCategory === "geral" ? <AnalyticsDashboard data={customLinks} /> : <DataGridCards items={customLinks.filter(l => l.curso === activeCategory)} />
+                    activeCategory === "geral" ? (
+                      <AnalyticsDashboard data={customLinks} />
+                    ) : (
+                      <DataGridCards items={customLinks.filter(l => l.curso === activeCategory)} />
+                    )
                   ) : (
                     <div className="flex flex-col items-center justify-center mt-20 p-12 bg-white rounded-3xl border border-slate-200 max-w-xl mx-auto shadow-sm">
                       <LayoutDashboard size={64} className="text-slate-200 mb-6" />
-                      <h3 className="text-xl font-bold text-[#003366] mb-2 text-center">Nenhum dado encontrado</h3>
-                      <p className="text-slate-500 mb-8 text-center max-w-sm">A folha de cálculo parece estar vazia ou não tem as permissões corretas.</p>
-                      <button onClick={fetchScriptData} className="bg-[#003366] text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-blue-800 transition-all hover:-translate-y-0.5">Tentar Novamente</button>
+                      <h3 className="text-xl font-bold text-[#003366] mb-2 text-center">
+                        Nenhum dado encontrado
+                      </h3>
+                      <p className="text-slate-500 mb-8 text-center max-w-sm">A folha de cálculo parece estar vazia ou a conexão falhou.</p>
+                      <button
+                        onClick={() => fetchScriptData()}
+                        className="bg-[#003366] text-white px-8 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-blue-800 transition-all hover:-translate-y-0.5"
+                      >
+                        Tentar Novamente
+                      </button>
                     </div>
                   )}
                 </div>
