@@ -290,13 +290,17 @@
       const stats = useMemo(() => {
         if (!data || data.length === 0) return null;
 
+        // Recolhe TODAS as chaves de todas as linhas para não falhar se a 1ª linha estiver vazia
+        const allKeys = Array.from(new Set(data.flatMap(item => Object.keys(item))));
+
         const getCol = (keywords) => {
-          return Object.keys(data[0]).find(key => 
+          return allKeys.find(key => 
             keywords.some(kw => key.toLowerCase().includes(kw))
           );
         };
 
-        const alunosCol = getCol(['aluno', 'quantidade', 'vaga']);
+        // Removido 'aluno' para evitar conflito com colunas como "Nome do Aluno", que zerava os gráficos.
+        const alunosCol = getCol(['quantidade', 'vaga', 'qtd', 'inscritos']);
         const segmentoCol = getCol(['segmento', 'setor', 'ramo']);
         const porteCol = getCol(['porte', 'tamanho']);
         const generoCol = getCol(['gênero', 'genero', 'sexo']);
@@ -305,6 +309,20 @@
         const eppCol = getCol(['epp']);
         const coordenadasCol = getCol(['coordenada', 'gps', 'latitude', 'latlong']);
 
+        // Novos identificadores para Idade e Cargo
+        const idadeCol = getCol(['idade', 'faixa etaria', 'faixa etária', 'nascimento', 'data de nascimento']);
+        const cargoCol = getCol(['cargo', 'função', 'funcao', 'ocupação', 'ocupacao', 'profissão', 'profissao']);
+
+        const empresaKey = allKeys.find(k => {
+          const lower = k.toLowerCase();
+          return (lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco') && !lower.includes('endereço')));
+        });
+        const nomeKey = allKeys.find(k => {
+          const lower = k.toLowerCase();
+          return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão') && !lower.includes('curso');
+        });
+        const enderecoKey = allKeys.find(k => k.toLowerCase().includes('endereço') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('rua') || k.toLowerCase().includes('logradouro'));
+
         let totalAlunos = 0;
         const alunosPorCurso = {};
         const segmentoData = {};
@@ -312,11 +330,15 @@
         let countMei = 0, countMe = 0, countEpp = 0;
         let countMasc = 0, countFem = 0;
 
+        const idadeData = {};
+        const cargoData = {};
+
         const segmentNamesMap = {}; // Mapa inteligente para unificar nomes de segmentos
 
         data.forEach(item => {
           const curso = item.curso || 'Sem Curso Atribuído';
-          const alunos = alunosCol ? (Number(item[alunosCol]) || 0) : 1;
+          // Se houver coluna de quantidade preenchida ele soma, senão conta 1 por defeito
+          const alunos = (alunosCol && item[alunosCol]) ? (Number(item[alunosCol]) || 1) : 1;
           
           totalAlunos += alunos;
           alunosPorCurso[curso] = (alunosPorCurso[curso] || 0) + alunos;
@@ -328,17 +350,6 @@
               const lat = parseFloat(nums[0].replace(',', '.'));
               const lng = parseFloat(nums[1].replace(',', '.'));
               if (!isNaN(lat) && !isNaN(lng)) {
-                const keys = Object.keys(item);
-                const empresaKey = keys.find(k => {
-                  const lower = k.toLowerCase();
-                  return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte'));
-                });
-                const nomeKey = keys.find(k => {
-                  const lower = k.toLowerCase();
-                  return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão');
-                });
-                const enderecoKey = keys.find(k => k.toLowerCase().includes('endereço') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('rua') || k.toLowerCase().includes('logradouro'));
-                
                 mapLocations.push({
                   lat,
                   lng,
@@ -397,6 +408,43 @@
             if (!eppCol && allVals.includes('EPP')) countEpp++;
             if (!meCol && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
           }
+
+          if (idadeCol) {
+            let idadeVal = String(item[idadeCol] || '').trim();
+            if (idadeVal && idadeVal.toLowerCase() !== 'undefined') {
+              let numIdade = NaN;
+              let ageGroup = idadeVal;
+              
+              if (idadeVal.includes('/') || idadeVal.includes('-')) {
+                const yearMatch = idadeVal.match(/\b(19|20)\d{2}\b/);
+                if (yearMatch) {
+                  const year = parseInt(yearMatch[0], 10);
+                  numIdade = new Date().getFullYear() - year;
+                }
+              } else {
+                numIdade = parseInt(idadeVal, 10);
+              }
+              
+              if (!isNaN(numIdade) && numIdade > 0 && numIdade < 120) {
+                if (numIdade < 18) ageGroup = "Menores de 18";
+                else if (numIdade <= 25) ageGroup = "18 a 25 anos";
+                else if (numIdade <= 35) ageGroup = "26 a 35 anos";
+                else if (numIdade <= 45) ageGroup = "36 a 45 anos";
+                else if (numIdade <= 55) ageGroup = "46 a 55 anos";
+                else ageGroup = "Mais de 55 anos";
+              }
+              
+              idadeData[ageGroup] = (idadeData[ageGroup] || 0) + 1;
+            }
+          }
+
+          if (cargoCol) {
+            let cargoVal = String(item[cargoCol] || '').trim();
+            if (cargoVal && cargoVal.toLowerCase() !== 'undefined' && cargoVal.toLowerCase() !== 'não informado') {
+              let displayName = cargoVal.charAt(0).toUpperCase() + cargoVal.slice(1).toLowerCase();
+              cargoData[displayName] = (cargoData[displayName] || 0) + 1;
+            }
+          }
         });
 
         const cursosUnicos = Object.keys(alunosPorCurso);
@@ -417,6 +465,20 @@
           { name: 'Feminino', value: countFem }
         ].filter(d => d.value > 0);
 
+        const chartIdade = Object.keys(idadeData)
+          .map(k => ({ name: k, value: idadeData[k] }))
+          .sort((a, b) => {
+            const order = ["Menores de 18", "18 a 25 anos", "26 a 35 anos", "36 a 45 anos", "46 a 55 anos", "Mais de 55 anos"];
+            let idxA = order.indexOf(a.name);
+            let idxB = order.indexOf(b.name);
+            if(idxA !== -1 && idxB !== -1) return idxA - idxB;
+            return b.value - a.value;
+          });
+
+        const chartCargo = Object.keys(cargoData)
+          .map(k => ({ name: k, value: cargoData[k] }))
+          .sort((a, b) => b.value - a.value);
+
         return {
           totalCursos: cursosUnicos.length,
           totalAlunos,
@@ -424,6 +486,8 @@
           chartSegmento,
           chartPorte,
           chartGenero,
+          chartIdade,
+          chartCargo,
           mapLocations
         };
       }, [data]);
@@ -550,6 +614,56 @@
                   <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
                     <AlertCircle className="mb-2 text-slate-300" size={24} />
                     Sem dados de Gênero na planilha.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <h4 className="text-lg font-bold text-[#003366] mb-6">Distribuição por Idade</h4>
+              <div className="h-72 w-full">
+                {stats.chartIdade && stats.chartIdade.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.chartIdade} margin={{ top: 20, right: 10, left: -20, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="name" tick={{fontSize: 10, fill: '#64748b'}} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" />
+                      <YAxis tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                      <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                      <Bar dataKey="value" name="Quantidade" fill="#f97316" radius={[4, 4, 0, 0]}>
+                         <LabelList dataKey="value" position="top" fill="#f97316" fontSize={12} fontWeight="bold" />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
+                    <AlertCircle className="mb-2 text-slate-300" size={24} />
+                    Sem dados de Idade na planilha.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <h4 className="text-lg font-bold text-[#003366] mb-6">Top Cargos / Funções</h4>
+              <div className="h-72 w-full">
+                {stats.chartCargo && stats.chartCargo.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.chartCargo.slice(0, 5)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                      <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 11, fill: '#334155'}} tickLine={false} axisLine={false} />
+                      <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                      <Bar dataKey="value" name="Quantidade" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
+                        {stats.chartCargo.slice(0, 5).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 4) % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-sm text-slate-400 text-center px-4">
+                    <AlertCircle className="mb-2 text-slate-300" size={24} />
+                    Sem dados de Cargo na planilha.
                   </div>
                 )}
               </div>
@@ -684,19 +798,20 @@
       const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
       const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
 
+      // Deteção robusta unificada para os cartões
+      const empresaKey = allKeys.find(k => {
+        const lower = k.toLowerCase();
+        return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco') && !lower.includes('endereço'));
+      });
+      
+      const nomeCompletoKey = allKeys.find(k => {
+        const lower = k.toLowerCase();
+        return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão') && !lower.includes('curso');
+      });
+
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
           {items.map((item) => {
-            const keys = Object.keys(item);
-            const empresaKey = keys.find(k => {
-              const lower = k.toLowerCase();
-              return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte'));
-            });
-            const nomeCompletoKey = keys.find(k => {
-              const lower = k.toLowerCase();
-              return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão');
-            });
-
             const primaryTitle = (empresaKey && item[empresaKey]) 
               ? item[empresaKey] 
               : (item.title || 'Cadastro');
@@ -762,14 +877,21 @@
         setError(null);
         try {
           const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw90C_oDqwNshphO5mI9JcNlmYvX1bK8U1fDS42l9JfVCtjvGaQCMzyVrRp0taRlgS4MQ/exec?aba=geral";
-          const response = await fetch(WEB_APP_URL);
+          
+          let response;
+          try {
+            response = await fetch(WEB_APP_URL);
+          } catch (fetchErr) {
+            throw new Error("CORS_OR_NETWORK");
+          }
+
           const rawText = await response.text();
           
           let result;
           try {
             result = JSON.parse(rawText);
           } catch(e) {
-            throw new Error("A resposta não é um JSON válido. Verifique a permissão do Google Apps Script.");
+            throw new Error("NOT_JSON");
           }
           
           if (result.status === "success") {
@@ -792,8 +914,13 @@
             setError("Erro na folha: " + (result.message || "Resposta inesperada do servidor."));
           }
         } catch (err) {
-          console.error(err);
-          setError("Erro ao carregar os dados. Verifique a ligação à folha de cálculo e se a permissão está definida para 'Qualquer Pessoa'.");
+          console.error("Erro na comunicação com a API:", err);
+          
+          if (err.message === "CORS_OR_NETWORK" || err.message === "NOT_JSON") {
+            setError("Acesso bloqueado pelo Google. Vá ao seu Apps Script > Implementar > Gerir implementações > Edite (lápis) > Versão: 'Nova versão' > Quem pode aceder: 'Qualquer pessoa'. Sem isto, o painel não consegue ler os dados.");
+          } else {
+            setError("Erro de ligação. Verifique se o link do Google Apps Script está correto e a responder.");
+          }
         } finally {
           setIsLoading(false);
         }
@@ -832,9 +959,15 @@
                   <p className="text-gray-500 font-medium">A analisar dados da folha...</p>
                 </div>
               ) : error ? (
-                <div className="text-center mt-20 text-red-600 font-medium bg-red-50 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
+                <div className="text-center mt-20 font-medium bg-red-50 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
                   <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
-                  {error}
+                  <p className="text-red-700">{error}</p>
+                  <button
+                    onClick={() => fetchScriptData()}
+                    className="mt-6 bg-red-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-red-700 transition-all"
+                  >
+                    Tentar Novamente
+                  </button>
                 </div>
               ) : (
                 <div className="w-full pb-12">
