@@ -59,22 +59,34 @@
     const CHART_COLORS = ['#003366', '#ffb800', '#14b8a6', '#f97316', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981'];
 
     const censorName = (name) => {
-      if (!name || typeof name !== "string") return name;
-      const parts = name.trim().split(/\s+/);
-      if (parts.length <= 2) return name;
+      if (!name) return "";
+      const strName = String(name).trim();
+      const parts = strName.split(/\s+/);
+      if (parts.length <= 2) return strName;
       return `${parts[0]} *** ${parts[parts.length - 1]}`;
     };
 
     const censorPhone = (phone) => {
-      if (!phone || typeof phone !== "string") return phone;
-      return phone.replace(/(\d{4,5})([-.\s]?)(\d{4})(?!\d)/, '****$2$3');
+      if (!phone) return "";
+      let digitCount = 0;
+      return String(phone).replace(/\d/g, (match) => {
+        digitCount++;
+        // Censura 4 números a partir do 5º (ou seja: 5º, 6º, 7º e 8º dígito)
+        if (digitCount >= 5 && digitCount <= 8) {
+          return '*';
+        }
+        return match;
+      });
     };
+
+    // Função central que normaliza textos (remove acentos e põe em minúsculas)
+    const normalizeKey = (k) => String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     const formatDataValue = (key, value) => {
       if (value === null || value === undefined || value === "") return "-";
       
       const strValue = String(value);
-      const keyLower = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const keyLower = normalizeKey(key);
 
       if (keyLower.includes("frequencia") || keyLower.includes("percentual")) {
         const num = Number(value);
@@ -83,15 +95,15 @@
         }
       }
 
-      if ((keyLower.includes("nome") && !keyLower.includes("empresa") && !keyLower.includes("razao") && !keyLower.includes("razão")) || keyLower.includes("aluno")) {
+      if ((keyLower.includes("nome") && !keyLower.includes("empresa") && !keyLower.includes("razao")) || keyLower.includes("aluno")) {
         return censorName(strValue);
       }
 
-      if (keyLower.includes("telefone") || keyLower.includes("celular") || keyLower.includes("contato")) {
+      if (keyLower.includes("telefone") || keyLower.includes("celular") || keyLower.includes("contato") || keyLower.includes("whatsapp")) {
         return censorPhone(strValue);
       }
 
-      return value;
+      return strValue;
     };
 
     function Header({ toggleMobileMenu, activeCategoryLabel }) {
@@ -149,7 +161,7 @@
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
               {categories.map((cat) => {
-                const IconComponent = cat.icon;
+                const IconComponent = cat.icon || FolderIcon;
                 return (
                   <button
                     key={cat.id}
@@ -232,6 +244,7 @@
 
         const bounds = [];
         locations.forEach(loc => {
+          if (!loc.lat || !loc.lng) return;
           const popupHtml = `
             <div style="font-family: inherit; color: #334155; min-width: 200px;">
               ${loc.empresa && loc.empresa !== 'Não informada' ? `<div style="font-size: 14px; font-weight: bold; color: #003366; margin-bottom: 4px;">${loc.empresa}</div>` : ''}
@@ -258,9 +271,10 @@
     function AnalyticsDashboard({ data }) {
       const [selectedSegment, setSelectedSegment] = useState(null);
 
-      // Componente customizado para quebrar os títulos muito compridos em várias linhas
       const CustomXAxisTick = ({ x, y, payload }) => {
-        const words = payload.value.split(' ');
+        if (!payload || payload.value == null) return null;
+        
+        const words = String(payload.value).split(' ');
         let lines = [];
         let currentLine = '';
         
@@ -288,40 +302,45 @@
       };
 
       const stats = useMemo(() => {
-        if (!data || data.length === 0) return null;
+        if (!data || !Array.isArray(data) || data.length === 0) return null;
 
-        // Recolhe TODAS as chaves de todas as linhas para não falhar se a 1ª linha estiver vazia
         const allKeys = Array.from(new Set(data.flatMap(item => Object.keys(item))));
 
-        const getCol = (keywords) => {
-          return allKeys.find(key => 
-            keywords.some(kw => key.toLowerCase().includes(kw))
-          );
+        // Função de busca robusta (ignora os números "1. ", "2. ", etc que estejam na coluna)
+        const getCols = (keywords) => {
+          return allKeys.filter(key => {
+            const keyLower = normalizeKey(key);
+            return keywords.some(kw => keyLower.includes(kw));
+          });
         };
 
-        // Removido 'aluno' para evitar conflito com colunas como "Nome do Aluno", que zerava os gráficos.
-        const alunosCol = getCol(['quantidade', 'vaga', 'qtd', 'inscritos']);
-        const segmentoCol = getCol(['segmento', 'setor', 'ramo']);
-        const porteCol = getCol(['porte', 'tamanho']);
-        const generoCol = getCol(['gênero', 'genero', 'sexo']);
-        const meiCol = getCol(['mei']);
-        const meCol = getCol(['me']); 
-        const eppCol = getCol(['epp']);
-        const coordenadasCol = getCol(['coordenada', 'gps', 'latitude', 'latlong']);
+        const alunosCols = getCols(['quantidade', 'vaga', 'qtd', 'inscritos']);
+        const segmentoCols = getCols(['segmento', 'setor', 'ramo']);
+        const porteCols = getCols(['porte', 'tamanho']);
+        const generoCols = getCols(['genero', 'sexo']);
+        const meiCols = getCols(['mei']);
+        const meCols = getCols(['me']); 
+        const eppCols = getCols(['epp']);
+        const coordenadasCols = getCols(['coordenada', 'gps', 'latitude', 'latlong']);
+        
+        // Identificadores baseados exatamentes nos nomes informados
+        const idadeCols = getCols(['idade', 'faixa etaria']);
+        const cargoCols = getCols(['cargo', 'funcao', 'ocupacao', 'profissao']);
 
-        // Novos identificadores para Idade e Cargo
-        const idadeCol = getCol(['idade', 'faixa etaria', 'faixa etária', 'nascimento', 'data de nascimento']);
-        const cargoCol = getCol(['cargo', 'função', 'funcao', 'ocupação', 'ocupacao', 'profissão', 'profissao']);
-
-        const empresaKey = allKeys.find(k => {
-          const lower = k.toLowerCase();
-          return (lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco') && !lower.includes('endereço')));
+        const empresaKeys = allKeys.filter(k => {
+          const lower = normalizeKey(k);
+          return (lower.includes('razao') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco')));
         });
-        const nomeKey = allKeys.find(k => {
-          const lower = k.toLowerCase();
-          return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão') && !lower.includes('curso');
+        
+        const nomeKeys = allKeys.filter(k => {
+          const lower = normalizeKey(k);
+          return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('curso');
         });
-        const enderecoKey = allKeys.find(k => k.toLowerCase().includes('endereço') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('rua') || k.toLowerCase().includes('logradouro'));
+        
+        const enderecoKeys = allKeys.filter(k => {
+          const lower = normalizeKey(k);
+          return lower.includes('endereco') || lower.includes('rua') || lower.includes('logradouro');
+        });
 
         let totalAlunos = 0;
         const alunosPorCurso = {};
@@ -329,22 +348,32 @@
         const mapLocations = [];
         let countMei = 0, countMe = 0, countEpp = 0;
         let countMasc = 0, countFem = 0;
-
         const idadeData = {};
         const cargoData = {};
-
-        const segmentNamesMap = {}; // Mapa inteligente para unificar nomes de segmentos
+        const segmentNamesMap = {}; 
 
         data.forEach(item => {
+          // Extrai o primeiro valor útil dentro da lista de colunas encontradas
+          const getVal = (cols) => {
+            for (let c of cols) {
+              if (item[c] !== undefined && item[c] !== null && String(item[c]).trim() !== '') {
+                return item[c];
+              }
+            }
+            return null;
+          };
+
           const curso = item.curso || 'Sem Curso Atribuído';
-          // Se houver coluna de quantidade preenchida ele soma, senão conta 1 por defeito
-          const alunos = (alunosCol && item[alunosCol]) ? (Number(item[alunosCol]) || 1) : 1;
+          
+          const alunosVal = getVal(alunosCols);
+          const alunos = alunosVal ? (Number(alunosVal) || 1) : 1;
           
           totalAlunos += alunos;
           alunosPorCurso[curso] = (alunosPorCurso[curso] || 0) + alunos;
 
-          if (coordenadasCol && item[coordenadasCol]) {
-            const coordStr = String(item[coordenadasCol]).trim();
+          const coordVal = getVal(coordenadasCols);
+          if (coordVal) {
+            const coordStr = String(coordVal).trim();
             const nums = coordStr.match(/-?\d+(?:[\.,]\d+)?/g);
             if (nums && nums.length >= 2) {
               const lat = parseFloat(nums[0].replace(',', '.'));
@@ -353,26 +382,23 @@
                 mapLocations.push({
                   lat,
                   lng,
-                  nome: (nomeKey && item[nomeKey]) ? censorName(String(item[nomeKey])) : 'Não informado',
-                  empresa: (empresaKey && item[empresaKey]) ? String(item[empresaKey]) : 'Não informada',
-                  endereco: (enderecoKey && item[enderecoKey]) ? String(item[enderecoKey]) : 'Não informado'
+                  nome: getVal(nomeKeys) ? censorName(String(getVal(nomeKeys))) : 'Não informado',
+                  empresa: getVal(empresaKeys) ? String(getVal(empresaKeys)) : 'Não informada',
+                  endereco: getVal(enderecoKeys) ? String(getVal(enderecoKeys)) : 'Não informado'
                 });
               }
             }
           }
 
-          if (segmentoCol) {
-            const rawSeg = String(item[segmentoCol] || 'Não Informado').trim();
+          const segVal = getVal(segmentoCols);
+          if (segVal) {
+            const rawSeg = String(segVal).trim();
             if (rawSeg) {
-              // Normaliza: remove acentos e deixa tudo minúsculo
               let cleanedSeg = rawSeg.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-              
-              // Unifica plurais/singulares comuns para evitar duplicados
               if (cleanedSeg === 'servicos') cleanedSeg = 'servico';
               if (cleanedSeg === 'comercios') cleanedSeg = 'comercio';
               if (cleanedSeg === 'industrias') cleanedSeg = 'industria';
 
-              // Define o nome de exibição oficial e formata a primeira letra para maiúscula
               let displayName = segmentNamesMap[cleanedSeg];
               if (!displayName) {
                 if (cleanedSeg === 'comercio') displayName = 'Comércio';
@@ -380,7 +406,6 @@
                 else if (cleanedSeg === 'industria') displayName = 'Indústria';
                 else if (cleanedSeg === 'agronegocio') displayName = 'Agronegócio';
                 else displayName = rawSeg.charAt(0).toUpperCase() + rawSeg.slice(1);
-                
                 segmentNamesMap[cleanedSeg] = displayName;
               }
 
@@ -389,41 +414,41 @@
             }
           }
 
-          if (generoCol) {
-            const genText = String(item[generoCol]).toUpperCase().trim();
+          const genVal = getVal(generoCols);
+          if (genVal) {
+            const genText = String(genVal).toUpperCase().trim();
             if (genText === 'M' || genText === 'MASCULINO') countMasc++;
             else if (genText === 'F' || genText === 'FEMININO') countFem++;
           }
 
-          if (porteCol) {
-            const p = String(item[porteCol]).toUpperCase();
+          const porteVal = getVal(porteCols);
+          if (porteVal) {
+            const p = String(porteVal).toUpperCase();
             if (p.includes('MEI')) countMei++;
             else if (p.includes('EPP')) countEpp++;
             else if (p.includes('ME')) countMe++;
           } else {
-            if (meiCol) countMei += Number(item[meiCol]) || 0;
-            if (eppCol) countEpp += Number(item[eppCol]) || 0;
             const allVals = Object.values(item).join(' ').toUpperCase();
-            if (!meiCol && allVals.includes('MEI')) countMei++;
-            if (!eppCol && allVals.includes('EPP')) countEpp++;
-            if (!meCol && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
+            const meiVal = getVal(meiCols);
+            const eppVal = getVal(eppCols);
+            const meVal = getVal(meCols);
+            
+            if (meiVal) countMei += Number(meiVal) || 0;
+            else if (allVals.includes('MEI')) countMei++;
+            
+            if (eppVal) countEpp += Number(eppVal) || 0;
+            else if (allVals.includes('EPP')) countEpp++;
+            
+            if (!meVal && (allVals.includes(' ME ') || allVals.includes('-ME'))) countMe++;
           }
 
-          if (idadeCol) {
-            let idadeVal = String(item[idadeCol] || '').trim();
-            if (idadeVal && idadeVal.toLowerCase() !== 'undefined') {
-              let numIdade = NaN;
-              let ageGroup = idadeVal;
-              
-              if (idadeVal.includes('/') || idadeVal.includes('-')) {
-                const yearMatch = idadeVal.match(/\b(19|20)\d{2}\b/);
-                if (yearMatch) {
-                  const year = parseInt(yearMatch[0], 10);
-                  numIdade = new Date().getFullYear() - year;
-                }
-              } else {
-                numIdade = parseInt(idadeVal, 10);
-              }
+          const idVal = getVal(idadeCols);
+          if (idVal) {
+            let idadeValStr = String(idVal).trim();
+            if (idadeValStr && idadeValStr.toLowerCase() !== 'undefined') {
+              // Garante que mesmo que venha "25 anos" consiga extrair o "25"
+              let numIdade = parseInt(idadeValStr, 10);
+              let ageGroup = idadeValStr;
               
               if (!isNaN(numIdade) && numIdade > 0 && numIdade < 120) {
                 if (numIdade < 18) ageGroup = "Menores de 18";
@@ -438,10 +463,11 @@
             }
           }
 
-          if (cargoCol) {
-            let cargoVal = String(item[cargoCol] || '').trim();
-            if (cargoVal && cargoVal.toLowerCase() !== 'undefined' && cargoVal.toLowerCase() !== 'não informado') {
-              let displayName = cargoVal.charAt(0).toUpperCase() + cargoVal.slice(1).toLowerCase();
+          const cVal = getVal(cargoCols);
+          if (cVal) {
+            let cargoStr = String(cVal).trim();
+            if (cargoStr && cargoStr.toLowerCase() !== 'undefined' && cargoStr.toLowerCase() !== 'não informado') {
+              let displayName = cargoStr.charAt(0).toUpperCase() + cargoStr.slice(1).toLowerCase();
               cargoData[displayName] = (cargoData[displayName] || 0) + 1;
             }
           }
@@ -688,7 +714,6 @@
 
           </div>
 
-          {/* Cards de Detalhamento Movidos para o Final */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-6">
             <h4 className="text-lg font-bold text-[#003366] mb-6 flex items-center">
               <MousePointerClick size={24} className="mr-2 text-teal-600" />
@@ -751,7 +776,7 @@
 
       const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
       const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
-      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
+      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(String(key).toLowerCase()));
 
       return (
         <div className="w-full overflow-x-auto">
@@ -767,7 +792,7 @@
               {items.map((item, idx) => (
                 <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
                   {dynamicColumns.map(col => {
-                    const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const keyLower = String(col).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
                     const formatted = formatDataValue(col, item[col]);
                     
@@ -796,27 +821,41 @@
 
       const specialKeys = ['id', 'icon', 'url', 'status', 'tags', 'curso', 'acao', 'ação'];
       const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item))));
-      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(key.toLowerCase()));
+      const dynamicColumns = allKeys.filter(key => !specialKeys.includes(String(key).toLowerCase()));
 
-      // Deteção robusta unificada para os cartões
-      const empresaKey = allKeys.find(k => {
-        const lower = k.toLowerCase();
-        return lower.includes('razao') || lower.includes('razão') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco') && !lower.includes('endereço'));
+      const empresaKeys = allKeys.filter(k => {
+        const lower = normalizeKey(k);
+        return (lower.includes('razao') || lower.includes('fantasia') || (lower.includes('empresa') && !lower.includes('porte') && !lower.includes('endereco')));
       });
       
-      const nomeCompletoKey = allKeys.find(k => {
-        const lower = k.toLowerCase();
-        return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('razão') && !lower.includes('curso');
+      const nomeCompletoKeys = allKeys.filter(k => {
+        const lower = normalizeKey(k);
+        return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('curso');
       });
 
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
           {items.map((item) => {
-            const primaryTitle = (empresaKey && item[empresaKey]) 
-              ? item[empresaKey] 
-              : (item.title || 'Cadastro');
+            let primaryTitle = item.title || 'Cadastro';
+            let empresaKeyFound = null;
+            for (let k of empresaKeys) {
+              if (item[k] !== undefined && item[k] !== null && String(item[k]).trim() !== '') {
+                primaryTitle = item[k];
+                empresaKeyFound = k;
+                break;
+              }
+            }
 
-            const rawSecondary = (nomeCompletoKey && item[nomeCompletoKey]) ? item[nomeCompletoKey] : null;
+            let rawSecondary = null;
+            let nomeCompletoKeyFound = null;
+            for (let k of nomeCompletoKeys) {
+              if (item[k] !== undefined && item[k] !== null && String(item[k]).trim() !== '') {
+                rawSecondary = item[k];
+                nomeCompletoKeyFound = k;
+                break;
+              }
+            }
+            
             const secondaryTitle = rawSecondary ? censorName(String(rawSecondary)) : null;
 
             return (
@@ -835,9 +874,9 @@
                 
                 <div className="space-y-3 flex-1">
                   {dynamicColumns.map(col => {
-                    if (col === empresaKey || col === nomeCompletoKey) return null;
+                    if (col === empresaKeyFound || col === nomeCompletoKeyFound) return null;
 
-                    const keyLower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const keyLower = normalizeKey(col);
                     const isFrequencia = keyLower.includes("frequencia") || keyLower.includes("percentual");
                     const formatted = formatDataValue(col, item[col]);
 
@@ -876,51 +915,138 @@
         setIsLoading(true);
         setError(null);
         try {
-          const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw90C_oDqwNshphO5mI9JcNlmYvX1bK8U1fDS42l9JfVCtjvGaQCMzyVrRp0taRlgS4MQ/exec?aba=geral";
+          const BASE_URL = "https://script.google.com/macros/s/AKfycbw90C_oDqwNshphO5mI9JcNlmYvX1bK8U1fDS42l9JfVCtjvGaQCMzyVrRp0taRlgS4MQ/exec";
+          const abasToFetch = ["geral", "Cursos 2026"]; 
+          let combinedData = [];
+          let hasErrors = false;
           
-          let response;
-          try {
-            response = await fetch(WEB_APP_URL);
-          } catch (fetchErr) {
-            throw new Error("CORS_OR_NETWORK");
+          for (const aba of abasToFetch) {
+            try {
+              const url = `${BASE_URL}?aba=${encodeURIComponent(aba)}`;
+              const response = await fetch(url);
+              
+              if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+              }
+              
+              const rawText = await response.text();
+              
+              let result;
+              try {
+                result = JSON.parse(rawText);
+              } catch (e) {
+                console.error(`O retorno da aba ${aba} não é JSON válido.`, rawText);
+                throw new Error("NOT_JSON");
+              }
+              
+              if (result.status === "success" && result.data) {
+                const processedArray = result.data.map(item => ({
+                  ...item,
+                  curso: item.curso || item.Curso || 'Sem Curso Atribuído'
+                }));
+                combinedData = [...combinedData, ...processedArray];
+              }
+            } catch (err) {
+              console.warn(`Aviso: Erro isolado ao carregar a aba '${aba}':`, err);
+              hasErrors = true;
+            }
+            
+            // Pausa entre requisições para evitar o bloqueio por excesso de velocidade no Google (anti-spam)
+            await new Promise(r => setTimeout(r, 1200));
           }
 
-          const rawText = await response.text();
-          
-          let result;
-          try {
-            result = JSON.parse(rawText);
-          } catch(e) {
-            throw new Error("NOT_JSON");
-          }
-          
-          if (result.status === "success") {
-            const linksData = result.data || [];
-            setCustomLinks(linksData);
+          if (combinedData.length > 0) {
+            
+            const allKeys = Array.from(new Set(combinedData.flatMap(item => Object.keys(item))));
+            
+            // 1. FILTRO DE NOME: Elimina linhas em que o nome está completamente vazio
+            const nomeKeys = allKeys.filter(k => {
+              const lower = normalizeKey(k);
+              return lower.includes('nome') && !lower.includes('empresa') && !lower.includes('razao') && !lower.includes('curso');
+            });
 
-            const uniqueCursos = Array.from(new Set(linksData.map(l => l.curso))).filter(Boolean);
-            const dynamicCategories = uniqueCursos.map(cursoNome => ({
-              id: String(cursoNome),
-              label: String(cursoNome).charAt(0).toUpperCase() + String(cursoNome).slice(1), 
-              icon: FolderIcon 
-            }));
+            if (nomeKeys.length > 0) {
+              combinedData = combinedData.filter(item => {
+                return nomeKeys.some(key => {
+                  const nome = String(item[key] || '').trim();
+                  return nome !== '' && nome.toLowerCase() !== 'undefined' && nome !== '-';
+                });
+              });
+            }
 
-            setCustomCategories([
-              { id: "geral", label: "Painel Geral", icon: PieChartIcon },
-              ...dynamicCategories
-            ]);
+            // 2. IDADE VS NASCIMENTO
+            const nascimentoKeys = allKeys.filter(k => {
+              const lower = normalizeKey(k);
+              return lower.includes('nascimento') || lower.includes('nasc');
+            });
 
+            const idadeKeys = allKeys.filter(k => {
+              const lower = normalizeKey(k);
+              return lower.includes('idade') || lower.includes('faixa etaria');
+            });
+
+            if (nascimentoKeys.length > 0 && idadeKeys.length === 0) {
+              // Tem data de nascimento mas não tem Idade, então calculamos a Idade nova
+              combinedData = combinedData.map(originalItem => {
+                let newItem = { ...originalItem };
+                nascimentoKeys.forEach(k => {
+                  const val = String(newItem[k] || '').trim();
+                  if (val && val.toLowerCase() !== 'undefined' && val !== '-') {
+                    let age = NaN;
+                    if (val.includes('/') || val.includes('-')) {
+                      const yearMatch = val.match(/\b(19|20)\d{2}\b/);
+                      if (yearMatch) {
+                        const year = parseInt(yearMatch[0], 10);
+                        age = new Date().getFullYear() - year;
+                      }
+                    } else {
+                      age = parseInt(val, 10);
+                    }
+                    if (!isNaN(age) && age > 0 && age < 120) {
+                      newItem['Idade'] = age + ' anos';
+                    }
+                  }
+                  delete newItem[k]; // Elimina Nascimento
+                });
+                return newItem;
+              });
+            } else if (nascimentoKeys.length > 0 && idadeKeys.length > 0) {
+               // Se a folha já trouxe a Idade, simplesmente apagamos o Nascimento para não poluir
+               combinedData = combinedData.map(originalItem => {
+                let newItem = { ...originalItem };
+                nascimentoKeys.forEach(k => delete newItem[k]);
+                return newItem;
+              });
+            }
+
+            if (combinedData.length === 0) {
+              setError("Nenhum dado válido (com nomes preenchidos) encontrado nas abas solicitadas.");
+            } else {
+              setCustomLinks(combinedData);
+
+              const uniqueCursos = Array.from(new Set(combinedData.map(l => l.curso || l.Curso))).filter(Boolean);
+              const dynamicCategories = uniqueCursos.map(cursoNome => ({
+                id: String(cursoNome),
+                label: String(cursoNome).charAt(0).toUpperCase() + String(cursoNome).slice(1), 
+                icon: FolderIcon 
+              }));
+
+              setCustomCategories([
+                { id: "geral", label: "Painel Geral", icon: PieChartIcon },
+                ...dynamicCategories
+              ]);
+            }
           } else {
-            setError("Erro na folha: " + (result.message || "Resposta inesperada do servidor."));
+            if (hasErrors) {
+              setError("Acesso bloqueado pelo Google (Erro de CORS/Permissão). Certifique-se de que o Apps Script está definido para 'Qualquer Pessoa'.");
+            } else {
+              setError("Nenhum dado encontrado nas abas solicitadas.");
+            }
           }
+
         } catch (err) {
-          console.error("Erro na comunicação com a API:", err);
-          
-          if (err.message === "CORS_OR_NETWORK" || err.message === "NOT_JSON") {
-            setError("Acesso bloqueado pelo Google. Vá ao seu Apps Script > Implementar > Gerir implementações > Edite (lápis) > Versão: 'Nova versão' > Quem pode aceder: 'Qualquer pessoa'. Sem isto, o painel não consegue ler os dados.");
-          } else {
-            setError("Erro de ligação. Verifique se o link do Google Apps Script está correto e a responder.");
-          }
+          console.error("Erro geral na comunicação:", err);
+          setError("Erro crítico de ligação. Verifique se o link do Google Apps Script está correto.");
         } finally {
           setIsLoading(false);
         }
