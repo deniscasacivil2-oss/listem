@@ -446,17 +446,26 @@
           if (idVal) {
             let idadeValStr = String(idVal).trim();
             if (idadeValStr && idadeValStr.toLowerCase() !== 'undefined') {
+              const lowerIdade = idadeValStr.toLowerCase();
+              
+              // Normalizar nomenclaturas de formulários antigos para evitar duplicidade
+              if (lowerIdade.includes("mais de 55") || lowerIdade.includes("acima de 55") || lowerIdade.includes("mais de 56") || lowerIdade.includes("56 ou mais")) {
+                idadeValStr = "56 anos ou mais";
+              }
+
               // Garante que mesmo que venha "25 anos" consiga extrair o "25"
               let numIdade = parseInt(idadeValStr, 10);
               let ageGroup = idadeValStr;
               
-              if (!isNaN(numIdade) && numIdade > 0 && numIdade < 120) {
+              if (!isNaN(numIdade) && numIdade > 0 && numIdade < 120 && !lowerIdade.includes("mais")) {
                 if (numIdade < 18) ageGroup = "Menores de 18";
                 else if (numIdade <= 25) ageGroup = "18 a 25 anos";
                 else if (numIdade <= 35) ageGroup = "26 a 35 anos";
                 else if (numIdade <= 45) ageGroup = "36 a 45 anos";
                 else if (numIdade <= 55) ageGroup = "46 a 55 anos";
-                else ageGroup = "Mais de 55 anos";
+                else ageGroup = "56 anos ou mais";
+              } else if (idadeValStr === "56 anos ou mais") {
+                ageGroup = "56 anos ou mais";
               }
               
               idadeData[ageGroup] = (idadeData[ageGroup] || 0) + 1;
@@ -494,7 +503,7 @@
         const chartIdade = Object.keys(idadeData)
           .map(k => ({ name: k, value: idadeData[k] }))
           .sort((a, b) => {
-            const order = ["Menores de 18", "18 a 25 anos", "26 a 35 anos", "36 a 45 anos", "46 a 55 anos", "Mais de 55 anos"];
+            const order = ["Menores de 18", "18 a 25 anos", "26 a 35 anos", "36 a 45 anos", "46 a 55 anos", "56 anos ou mais"];
             let idxA = order.indexOf(a.name);
             let idxB = order.indexOf(b.name);
             if(idxA !== -1 && idxB !== -1) return idxA - idxB;
